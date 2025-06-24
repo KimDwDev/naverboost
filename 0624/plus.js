@@ -1,5 +1,10 @@
 "use strict";
 
+/**
+ * 초기 배열의 원소를 분석한 후 오류가 있다면 걸러내기 위한 함수
+ * @param {arr} arr // 초기 배열 
+ * @returns 
+ */
 const checkArr = (arr) => {
 
   // 배열 타입이 맞는지 확인
@@ -46,63 +51,76 @@ const IndexSortFunc = (cards) => {
 
 }
 
-// 게임 진행
+/**
+ * 카드 게임을 진행하게 해주는 클래스
+ */
 class playGame {
-  constructor (arr1, arr2, arr3, arr4) {
-    this.arr = [arr1, arr2, arr3, arr4];
+  /**
+   * 
+   * @param {pile1} arr1 // 첫 번째 카드 줄
+   * @param {pile2} arr2 // 두 번째 카드 줄
+   * @param {pile3} arr3 // 세 번째 카드 줄
+   * @param {pile4} arr4 // 네 번째 카드 줄
+   */
+  constructor (pile1, pile2, pile3, pile4) {
+    this.piles = [pile1, pile2, pile3, pile4];
     this.stop = false;
   }
 
-  start(card) {
+  start(cardValue) {
+
+    // 총 pile(줄)의 개수
+    const pileCount = this.piles.length;
+    // 유효한 pile이 하나라도 있는지 여부
+    let hasCandidate = false;
+    // 현재까지 찾은 최적의 차이값
+    let closestDifference = NaN;
+    // 그 차이가 발생한 pile의 인덱스 
+    // undefined 값은 굳이 설정하지 않다는 점을 알 수 있다.
+    let selectedPileIndex;
 
     // 차이를 계산
-    const arrLen = this.arr.length;
-    let swap = false;
-    let lowerValue = NaN;
-    let lowerIdx = undefined;
+    for (let pileIndex = 0; pileIndex < pileCount; pileIndex++) {
 
-    // 차이를 계산
-    for (let i = 0; i < arrLen; i++) {
+      const pile = this.piles[pileIndex];
 
-      const arr = this.arr[i];
-
-      if (arr.length === 0) continue;
+      if (pile.length === 0) continue;
       
       // 값이 있다면 차이값을 저장해준다.
-      const diff = arr.at(-1) - +card;
-      swap = true
+      const diff = pile.at(-1) - +cardValue;
+      hasCandidate = true;
 
-      // 차이값을 파악후 
-      if (isNaN(lowerValue)) {
-        lowerValue = diff
-        lowerIdx = i;
+      // 각 pile의 마지막 카드와 비교해 차이를 계산
+      // 여기에 분명 좀 더 좋은 코드가 있을것이다.
+      if (isNaN(closestDifference)) {
+        closestDifference = diff;
+        selectedPileIndex = pileIndex;
       }
       else {
-        // 차이가 최소면 갱신
-        if (Math.abs(lowerValue) > Math.abs(diff)) {
-          lowerValue = diff;
-          lowerIdx = i;
+        // 절댓값이 더 작으면 갱신
+        if (Math.abs(closestDifference) > Math.abs(diff)) {
+          closestDifference = diff;
+          selectedPileIndex = pileIndex;
         }
-        // 두 절댓값이 같으나 원래값이 더 크면 갱신 (차이는 같으나 더 크기때문에)
-        else if (Math.abs(lowerValue) === Math.abs(diff) && lowerValue < diff) {
-          lowerValue = diff;
-          lowerIdx = i;
+        // 절댓값이 같고, 원래값이 더 크면 갱신
+        else if (Math.abs(closestDifference) === Math.abs(diff) && closestDifference < diff) {
+          closestDifference = diff;
+          selectedPileIndex = pileIndex;
         }; 
       } 
     }
     
     // 스왑이 한번도 이루어지지 않았다는것은 배열안에 모든값이 존재하지 않는다는 의미임으로 게임을 종료한다.
-    this.stop = !swap;
+    this.stop = !hasCandidate;
     if (this.stop) return 0;
     
-    // lowerValue는 사실상 업데이트할 때 사용했음으로 내가 사용할 변수는 lowerIdx이다. 
-    
-    // 값이 양수이면 벌점은 없고 배열의 값을 추가하고 음수이면 배열을 비우고 비운만큼의 벌점을 부과한다. (
-    // 중복은 위에서 걸렀기 때문에 같을수는 없다.)
-    if (lowerValue > 0) this.arr[lowerIdx].push(card);
+    // 여기도 더 좋은 로직이 있을수 있다. 
+    // 양수 차이 → 해당 pile에 카드 추가
+    if (closestDifference > 0) this.piles[selectedPileIndex].push(cardValue);
+    // 음수 차이 → 해당 pile 비우고 페널티 부과
     else {
-      const penalty = this.arr[lowerIdx].length;
-      this.arr[lowerIdx] = [];
+      const penalty = this.piles[selectedPileIndex].length;
+      this.piles[selectedPileIndex] = [];
       return penalty;
     }
 
@@ -120,6 +138,9 @@ const play = (userArr) => {
 
 
   // 예외 처리
+  // 사용 메모리 정수 4 * 10 = 40 byte 예상
+  // 시간 복잡도 O(1) 예상
+  // 개선한다면 메모리를 줄이는 쪽으로 생각해보자 
   const arrBool = checkArr(userArr)
   if (!arrBool) return result;
 
@@ -130,10 +151,19 @@ const play = (userArr) => {
   const arr4 = [80];
 
   // game 세팅
+  // 
   const game = new playGame(arr1, arr2, arr3, arr4);
   const resultKeyName = Array.from(result.keys());
 
   // 게임 시작
+  /** 
+  변수 많고 복사한 배열도 많음 -> 배열을 여러번 복사하고 확인하고 하는 등 너무 난잡하게 사용했다 이부분을 
+  개선하는 방향으로 가보자.
+  */
+  /**
+  시간복잡도 O(n) 예상 -> 유저가 입력한 배열을 돌리는 부분이라서 사실상 시간 복잡도를 줄이는 방향은
+  떠오르지 않는다 따라서 이부분에서는 개선할 부분이 생각나지 않는다.  
+  */ 
   const totalCount = userArr.length; 
   for (let i = 0; i < totalCount; i += 3) {
     
@@ -178,23 +208,23 @@ const play = (userArr) => {
 // 데이터 입력/출력 부분
 const readline = require('readline');
 const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout
+  input: process.stdin,
+  output: process.stdout
 });
 
 let inputs = [];
 rl.on('line', (line) => {
-	inputs.push(line);
-	if (inputs.length === 1) {
-		rl.close();
-	}
+  inputs.push(line);
+  if (inputs.length === 1) {
+    rl.close();
+  }
 });
 
 rl.on('close', () => {
-	const numArray = inputs[0].split(',').map(Number);
-	const answer = play(numArray);
-	for (const [key, value] of answer){
-		console.log(key+"="+value);
-	}
-	rl.close();
+  const numArray = inputs[0].split(',').map(Number);
+  const answer = play(numArray);
+  for (const [key, value] of answer){
+    console.log(key+"="+value);
+  }
+  rl.close();
 });
