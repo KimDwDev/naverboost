@@ -1,6 +1,40 @@
+
+/**
+ * 
+ * @param {*} current 
+ * @param {*} dice 
+ * @returns 
+ */
 function nextPosition(current, dice) {
     const next = current + dice;
     
+    // 기존 코드 
+    // if (next == 4) {
+    //     return dice + 10;
+    // }
+    // else if (next == 8) {
+    //     return dice + 22;
+    // }
+    // else if (next == 28) {
+    //     return dice + 48;
+    // }
+    // else if (next == 21) {
+    //     return dice + 42;
+    // }
+    // else if (next == 50) {
+    //     return dice + 17;
+    // }
+    // else if (next == 71) {
+    //     return dice + 92;
+    // }
+    // else if (next == 80) {
+    //     return dice + 19;
+    // }
+    
+    // return dice;    
+    // }
+
+
     /// 자바스크립트에서는 === 로 구분을 한다. 
     if (next === 4) {
         return dice + 10;
@@ -48,28 +82,25 @@ function nextPosition(current, dice) {
     return dice; 
 }
 
+// 초기값
 let start = 1;
 let next = 1;
-let dice = 3;
-next = start + nextPosition(start, dice); 
-console.log("from=",start,", dice=",dice,", next=", next);
 
-start = next;
-dice = 4;
-next = start + nextPosition(start, dice);
-console.log("from=",start,", dice=",dice,", next=", next);
+while (next < 100) {
 
-start = next;
-dice = 3;
-next = start + nextPosition(start, dice);
-console.log("from=",start,", dice=",dice,", next=", next);
+  // 초기값 세팅
+  start = next;
 
-start = next;
-dice = 5;
-next = start + nextPosition(start, dice);
-console.log("from=",start,", dice=",dice,", next=", next);
+  // 주사위 굴리기
+  const dice = Math.floor(Math.random() * 6 ) + 1;
 
-start = next;
-dice = 1;
-next = start + nextPosition(start, dice);
-console.log("from=",start,", dice=",dice,", next=", next);
+  // 주사위 움직이기 
+  next = start + nextPosition(current, dice);
+  if (next >= 100) {
+    next = 100;
+  }
+
+  // 콘솔 창에 띄우기 
+  console.log("from= ", start, "dice= ", dice, "next= ",next);
+
+}
