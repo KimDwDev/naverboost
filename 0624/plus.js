@@ -25,6 +25,7 @@ const checkArr = (arr) => {
     const currentValue = arr[i];
 
     // 1 ~ 100 사이가 아니라면 
+    // 조심 조심
     if (currentValue < 1 || currentValue > 100) {
       return 0;
     }
@@ -43,9 +44,10 @@ const checkArr = (arr) => {
 }
 
 // 인덱스 배열을 알려주는 함수
+// 복사할 필요없이 (cards는 확실한 배열이기 때문에)
 const IndexSortFunc = (cards) => {
 
-  return Array.from(cards)
+  return cards
   .map((_, idx) => idx)
   .sort((a, b) => cards[a] - cards[b]);
 
@@ -91,23 +93,11 @@ class playGame {
       hasCandidate = true;
 
       // 각 pile의 마지막 카드와 비교해 차이를 계산
-      // 여기에 분명 좀 더 좋은 코드가 있을것이다.
-      if (isNaN(closestDifference)) {
+      // 이부분을 한 줄로 정리 오류가 없을지는 고민이다.
+      if (isNaN(closestDifference) || Math.abs(closestDifference) > Math.abs(diff) || Math.abs(closestDifference) === Math.abs(diff) && closestDifference < diff) {
         closestDifference = diff;
         selectedPileIndex = pileIndex;
       }
-      else {
-        // 절댓값이 더 작으면 갱신
-        if (Math.abs(closestDifference) > Math.abs(diff)) {
-          closestDifference = diff;
-          selectedPileIndex = pileIndex;
-        }
-        // 절댓값이 같고, 원래값이 더 크면 갱신
-        else if (Math.abs(closestDifference) === Math.abs(diff) && closestDifference < diff) {
-          closestDifference = diff;
-          selectedPileIndex = pileIndex;
-        }; 
-      } 
     }
     
     // 스왑이 한번도 이루어지지 않았다는것은 배열안에 모든값이 존재하지 않는다는 의미임으로 게임을 종료한다.
@@ -128,6 +118,11 @@ class playGame {
   }
 }
 
+/**
+ * 
+ * @param {userArr} userArr // 대입할 배열의 값 
+ * @returns 
+ */
 const play = (userArr) => {
 
   // 리턴할 값
@@ -144,15 +139,15 @@ const play = (userArr) => {
   const arrBool = checkArr(userArr)
   if (!arrBool) return result;
 
-  // 각 배열 
-  const arr1 = [10];
-  const arr2 = [30];
-  const arr3 = [50];
-  const arr4 = [80];
+  // 초기 카드 줄 설정
+  const pile1 = [10];
+  const pile2 = [30];
+  const pile3 = [50];
+  const pile4 = [80];
 
-  // game 세팅
-  // 
-  const game = new playGame(arr1, arr2, arr3, arr4);
+  // 게임 인스턴스 생성
+  const game = new playGame(pile1, pile2, pile3, pile4);
+
   const resultKeyName = Array.from(result.keys());
 
   // 게임 시작
@@ -174,6 +169,7 @@ const play = (userArr) => {
     const cardIndex = IndexSortFunc(cards);
 
     // 게임이 끝났다면 스탑 해줘야 한다.
+    // stop을 두번하는 부분이 걸리기는 한다. 
     if (game.stop) break;
     
     // 게임 진행
