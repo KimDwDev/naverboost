@@ -270,4 +270,4 @@ function find(param0, param1) {
 
 }
 
-find("200008", 6);
+console.log(find("198402", 2));
