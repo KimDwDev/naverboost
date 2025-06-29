@@ -22,10 +22,10 @@ class Compile {
     const tokenStream = frontend.Lexer();
 
     // Parser: 토큰 -> 파서트리 -> AST 변환
-    frontend.Parser(tokenStream);
+    const ast = frontend.Parser(tokenStream);
 
     // SementicAnalyses: AST의미 분석
-    frontend.SementicAnalySis();
+    frontend.SementicAnalySis(ast);
 
     // MakeIrCode: AST를 IRCODE로 변환
     frontend.MakeIrCode();

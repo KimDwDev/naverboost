@@ -590,12 +590,148 @@ class Frontend {
 
   /**
    * 
-   * @param {parserTree} parserTree // CST이다. 
+   * @param {cfg} cfg // 타입을 만들 cfg 생성 
    */
-  MakeAST(parserTree) {
+  MakeNodeType(cfg) {
+    const classes = {};
+    // 기본 AST 타입
+    classes.ProgramNode = class {
+      constructor(body) {
+        this.type = 'Program';
+        this.body = body;
+      }
+    };
+    classes.VariableDeclarationNode = class {
+      constructor(name, init) {
+        this.type = 'VariableDeclaration';
+        this.name = name;
+        this.init = init;
+      }
+    };
+    classes.BinaryExpressionNode = class {
+      constructor(operator, left, right) {
+        this.type = 'BinaryExpression';
+        this.operator = operator;
+        this.left = left;
+        this.right = right;
+      }
+    };
+    classes.IdentifierNode = class {
+      constructor(name) {
+        this.type = 'Identifier';
+        this.name = name;
+      }
+    };
+    classes.LiteralNode = class {
+      constructor(value) {
+        this.type = 'Literal';
+        this.value = value;
+      }
+    };
 
-    
+    // 추가 
+    classes.ExpressionNode = class {
+      constructor(expr) {
+        this.type = 'Expression';
+        this.expr = expr;
+      }
+    };
 
+    classes.DeclarationListNode = class {
+      constructor(list) {
+        this.type = 'DeclarationList';
+        this.list = list;  
+      }
+    };
+
+    classes.DeclarationListPrimeNode = class {
+      constructor(list) {
+        this.type = 'DeclarationListPrime';
+        this.list = list;  
+      }
+    };
+    return classes;
+  }
+
+
+  /**
+   * 
+   * @param {parserTree} parserTree // 후위 순회할 cst 
+   * @param {cfgNodeClass} cfgNodeClass // 순회한 후 클래스로 바꿀 객체
+   */
+  PostOrderCst(parserTree, cfgNodeClass) {
+    function traverse(node) {
+      const childrenAST = node.children.map(traverse).filter(n => n != null);
+
+      switch (node.symbol) {
+        case 'Program':
+          return new cfgNodeClass.ProgramNode(
+            childrenAST[0]
+          );
+
+        case 'DeclarationList': {
+          const [firstDecl, restDecls] = childrenAST;
+          const list = [ firstDecl ];
+          if (Array.isArray(restDecls)) {
+            list.push(...restDecls);
+          }
+          return new cfgNodeClass.DeclarationListNode(list);
+        }
+
+        case 'DeclarationListPrime': {
+          if (childrenAST.length === 0) {
+            return [];           // ε
+          }
+          const [ decl, rest ] = childrenAST;
+          return [ decl ].concat(rest || []);
+        }
+
+        case 'Declaration': {
+          const idLex   = node.children[1].lexeme;       
+          const initAST = traverse(node.children[3]);    
+          return new cfgNodeClass.VariableDeclarationNode(idLex, initAST);
+        }
+
+        case 'Expression': {
+          const childAST = childrenAST[0];
+          return new cfgNodeClass.ExpressionNode(childAST);
+        }
+
+        case 'Primary': {
+          const child = node.children[0];
+          if (child.symbol.startsWith('IDENTIFIER')) {
+            return new cfgNodeClass.IdentifierNode(child.lexeme);
+          }
+          if (child.symbol.startsWith('NUMBER')) {
+            return new cfgNodeClass.LiteralNode(Number(child.lexeme));
+          }
+          return null;
+        }
+        default:
+          return childrenAST[0] || null;
+      }
+    }
+
+    return traverse(parserTree);
+  }
+
+
+  /**
+   * 
+   * @param {parserTree} parserTree // CST이다. 
+   * @param {cfg} cfg // cfg이다.
+   */
+  MakeAST(parserTree, cfg) {
+
+    // 문법 살핀 후 노드 타입 목록 설정
+    const cfgNodeClass = this.MakeNodeType(cfg);
+
+    // 후위 순회를 통해서 CST를 AST로 제작
+    console.log("AST 제작중..");
+    console.log();
+    const ast = this.PostOrderCst(parserTree, cfgNodeClass);
+    console.log(JSON.stringify(ast, null, 2));
+    console.log("--------------------------------------------")
   }
 
   /**
@@ -616,13 +752,16 @@ class Frontend {
     const parserTree = this.MakeParserTree(tokenStream, parsingTable, cfg);
 
     // AST 제작
+    const ast = this.MakeAST(parserTree, cfg);
 
-
+    return ast;
   }
 
-  /** AST의 의미를 분석하는 작업 */
-  SementicAnalySis() {
-
+  /**
+   * 
+   * @param {ast} ast // ast 대입
+   */
+  SementicAnalySis(ast) {
   }
 
   /** AST를 IR CODE로 바꾸는 작업 */
