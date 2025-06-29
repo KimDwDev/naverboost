@@ -5,10 +5,12 @@ class Frontend {
 
   /**
    * 
+   * @param {symbolTable} symbolTable // 사용되어 지는 심볼테이블
    * @param {main} main // 프론트엔드에서 처리할 메인 변수 
    */
-  constructor(main) {
+  constructor(main, symbolTable) {
     this.main = main
+    this.symbolTable = symbolTable
   }
 
 
@@ -179,7 +181,7 @@ class Frontend {
 
   /** 문자열을 토큰으로 파싱해주는 작업 */
   Lexer() {
-    
+
     // 토큰 스트림
     // 인덱스, 이름, 타입, matrix... 
     const tokenStream = [];
@@ -193,8 +195,407 @@ class Frontend {
     // 분석 
     this.LexerAnalysis(tokenStream, clearString);
 
+    console.log("--------------------------------------------");
+    console.log("Lexial analysis");
+    console.log();
+
+    tokenStream.forEach((value, idx) => {
+      console.log(`${idx}번째 토큰: ${JSON.stringify(value)}`);
+    })
+    console.log("--------------------------------------------");
+
     // 토큰
     return tokenStream
+  }
+
+
+  /**
+   * 
+   * @param {tokenStream} tokenStream // cfg를 이용해서 VASP를 만들토큰 스트림 
+   */
+  CFGs(tokenStream) {
+
+    console.log("토큰스트림을 이용해 NTPS 설계 후 CFG 설정 중..");
+    console.log();
+
+    // T정의
+    const keywords   = new Set();
+    const operators  = new Set();
+    const punctuators= new Set();
+    const identifiers= new Set();
+    const numbers    = new Set();
+    for (const tok of tokenStream) {
+      switch (tok.type) {
+        case 'KEYWORD':    keywords.add(tok.lexeme); break;
+        case 'OPERATOR':   operators.add(tok.lexeme); break;
+        case 'PUNCTUATOR': punctuators.add(tok.lexeme); break;
+        case 'IDENTIFIER': identifiers.add(tok.lexeme); break;
+        case 'NUMBER':     numbers.add(tok.lexeme); break;
+      }
+    }
+    const terminals = [
+      ...[...keywords].map(k => `KEYWORD(${k})`),
+      ...[...operators].map(o => `OPERATOR(${o})`),
+      ...[...punctuators].map(p => `PUNCTUATOR(${p})`),
+      ...[...identifiers].map(i => `IDENTIFIER(${i})`),
+      ...[...numbers].map(n => `NUMBER(${n})`)
+    ];
+
+    // N, S 정의
+    const nonTerminals = [
+      'Program', 'DeclarationList', 'Declaration',
+      'Expression','NewExpr','MemberCalls','Primary'
+    ];
+    const startSymbol = 'Program';
+
+    // P 생성 정의 
+    // 문제점 let, const 등과 같은 KEYWORD는 아직 읽지 못한다.
+    const productions = new Map([
+      ['Program', [
+        [ 'DeclarationList' ]
+      ]],
+
+      // 왼쪽 재귀를 제거한 DeclarationList
+      ['DeclarationList', [
+        [ 'Declaration', "DeclarationListPrime" ]
+      ]],
+      ['DeclarationListPrime', [
+        [ 'Declaration', "DeclarationListPrime" ],
+        []    // ε
+      ]],
+
+      ['Declaration', [[
+        `KEYWORD(var)`, `IDENTIFIER(${[...identifiers][0]})`,
+        `OPERATOR(=)`, 'Expression', `PUNCTUATOR(;)`
+      ]]],
+
+      // 나머지도 필요한 만큼 정의…
+      ['Expression',  [[ 'NewExpr' ], [ 'Primary' ]]],
+      ['NewExpr',     [[
+        `KEYWORD(new)`, `IDENTIFIER(${[...identifiers][1]})`, 'MemberCalls'
+      ]]],
+      ['MemberCalls', [
+        [ `PUNCTUATOR(.)`, `IDENTIFIER(init)`,
+          `PUNCTUATOR(()`, `PUNCTUATOR())`, 'MemberCalls' ],
+        []  // ε
+      ]],
+      ['Primary', [
+        [ `IDENTIFIER(${[...identifiers][0]})` ],
+        [ `NUMBER(${[...numbers][0]})` ]
+      ]],
+    ]);
+
+    const cfg = { nonTerminals, terminals, startSymbol, productions };
+    cfg.nonTerminals = Array.from(cfg.productions.keys());
+
+    // 출력
+    for (const [lhs, rhss] of cfg.productions) {
+      rhss.forEach(rhs => {
+        console.log(`${lhs} → ${rhs.length ? rhs.join(' ') : 'ε'}`);
+      });
+    }
+    console.log('--------------------------------------------');
+
+    return cfg;
+  }
+
+
+  /**
+   * 
+   * @param {cfg} cfg // parsing table제작에 사용되는 cfgs 
+   */
+  MakeParsingTable(cfg) {
+
+    console.log("CFG를 이용해서 parsing table 제작 중...");
+    console.log();
+
+    // ε, 입력 끝
+    const EPS = "ε", END = "$";
+
+    // FIRST 함수
+    function computeFirst() {
+      // 초기설정 터미널 and 논터미널
+      const FIRST = new Map();
+      cfg.nonTerminals.forEach(NT => FIRST.set(NT, new Set()));
+      cfg.terminals.forEach(T  => FIRST.set(T,  new Set([T])));
+
+      let changed;
+      do {
+        changed = false;
+        for (const [A, rhss] of cfg.productions) {
+          const firstA = FIRST.get(A);
+          for (const rhs of rhss) {
+            if (rhs.length === 0) {
+              if (!firstA.has(EPS)) {
+                firstA.add(EPS);
+                changed = true;
+              }
+              continue;
+            }
+
+            let nullableAll = true;
+            for (const sym of rhs) {
+              if (!FIRST.has(sym)) {
+                FIRST.set(sym, new Set([sym]));
+              }
+              const firstSym = FIRST.get(sym);
+
+              for (const t of firstSym) {
+                if (t !== EPS && !firstA.has(t)) {
+                  firstA.add(t);
+                  changed = true;
+                }
+              }
+              if (!firstSym.has(EPS)) {
+                nullableAll = false;
+                break;
+              }
+            }
+
+            if (nullableAll && !firstA.has(EPS)) {
+              firstA.add(EPS);
+              changed = true;
+            }
+          }
+        }
+      } while (changed);
+
+      return FIRST;
+    }
+
+    // FOLLOW 함수
+    function computeFollow(FIRST) {
+      const FOLLOW = new Map();
+      cfg.nonTerminals.forEach(NT => FOLLOW.set(NT, new Set()));
+      FOLLOW.get(cfg.startSymbol).add(END);
+
+      let changed;
+      do {
+        changed = false;
+        for (const [A, rhss] of cfg.productions) {
+          for (const rhs of rhss) {
+            for (let i = 0; i < rhs.length; i++) {
+              const B = rhs[i];
+              if (!cfg.nonTerminals.includes(B)) continue;
+
+              const followB = FOLLOW.get(B);
+              let nullableSuffix = true;
+
+              for (let j = i + 1; j < rhs.length; j++) {
+                const X = rhs[j];
+                const firstX = FIRST.get(X) || new Set([X]);
+                for (const t of firstX) {
+                  if (t !== EPS && !followB.has(t)) {
+                    followB.add(t);
+                    changed = true;
+                  }
+                }
+                if (!firstX.has(EPS)) {
+                  nullableSuffix = false;
+                  break;
+                }
+              }
+
+              if (nullableSuffix) {
+                for (const t of FOLLOW.get(A)) {
+                  if (!followB.has(t)) {
+                    followB.add(t);
+                    changed = true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } while (changed);
+
+      return FOLLOW;
+    }
+
+    // 실제 호출
+    const FIRST  = computeFirst(cfg);
+    const FOLLOW = computeFollow(FIRST);
+
+    console.log("FIRST 집합:");
+    for (const [X, s] of FIRST) {
+      console.log(`  FIRST(${X}) = { ${[...s].join(", ")} }`);
+    }
+    console.log();
+
+    console.log("FOLLOW 집합:");
+    for (const [A, s] of FOLLOW) {
+      console.log(`  FOLLOW(${A}) = { ${[...s].join(", ")} }`);
+    }
+    console.log();
+
+    // parsing table 제작
+
+    // RHS 함수 제작
+    function firstOfSequence(rhs) {
+      const result = new Set();
+      let nullableAll = true;
+
+      for (const sym of rhs) {
+        const firstSym = FIRST.get(sym) || new Set([sym]);
+        for (const t of firstSym) {
+          if (t !== EPS) result.add(t);
+        }
+        if (!firstSym.has(EPS)) {
+          nullableAll = false;
+          break;
+        }
+      }
+      if (nullableAll) result.add(EPS);
+      return result;
+    }
+
+    // 사용할 테이블
+    const parsingTable = new Map();
+    cfg.nonTerminals.forEach(NT => parsingTable.set(NT, new Map()));
+
+    for (const [A, rhss] of cfg.productions) {
+      const row = parsingTable.get(A);
+      for (const rhs of rhss) {
+        const firstSeq = firstOfSequence(rhs);
+        for (const a of firstSeq) {
+          if (a === EPS) continue;
+          row.set(a, rhs);
+        }
+        if (firstSeq.has(EPS)) {
+          for (const b of FOLLOW.get(A)) {
+            row.set(b, rhs);
+          }
+        }
+      }
+    }
+
+    // 테이블 출력
+    console.log("Parsing Table:");
+    for (const NT of cfg.nonTerminals) {
+      const row = parsingTable.get(NT);
+      for (const term of [...cfg.terminals, END]) {
+        if (row.has(term)) {
+          const prodRhs = row.get(term);
+          const rhsStr  = prodRhs.length ? prodRhs.join(" ") : EPS;
+          console.log(`  M[${NT}, ${term}] = ${NT} → ${rhsStr}`);
+        }
+      }
+    }
+    console.log("--------------------------------------------");
+
+    return parsingTable
+  }
+
+  /**
+   * CST를 제작하기 위한 함수
+   * @param {tokenStream} tokenStream // automata이론을 적용한 토큰 스트림
+   * @param {parsingTable} parsingTable // cfg를 이용해서 만든 파싱테이블
+   * @param {cfg} cfg // 어떤 식으로 공식을 세웠는지 알기 위해서 사용
+   */
+  MakeParserTree(tokenStream, parsingTable, cfg) {
+
+    console.log("Parser Tree (CST) 제작 중");
+    console.log();
+
+    // LL1 파서를 진행할 계획
+
+    // CST 노드 초기 설정
+    class Node {
+      constructor(symbol) {
+        this.symbol = symbol;        
+        this.lexeme = null;         
+        this.children = [];       
+      }
+    };
+
+    // 심볼에 이름으로 사용될 예정
+    function tokenSymbol(tok) {
+      switch (tok.type) {
+        case 'KEYWORD':    return `KEYWORD(${tok.lexeme})`;
+        case 'OPERATOR':   return `OPERATOR(${tok.lexeme})`;
+        case 'PUNCTUATOR': return `PUNCTUATOR(${tok.lexeme})`;
+        case 'IDENTIFIER': return `IDENTIFIER(${tok.lexeme})`;
+        case 'NUMBER':     return `NUMBER(${tok.lexeme})`;
+        default:           return tok.type;  
+      }
+    }
+
+    // 사용되는 스택 기호
+    const EPS = "ε", END = "$";
+
+    // 입력될값
+    const input = [...tokenStream, { type: END, lexeme: END }];
+    let ip = 0;
+    
+    // LL1 parser 진행
+    
+    // 파싱 스택
+    const symbolStack = [END, cfg.startSymbol];
+    // 노드 스택
+    const nodeStack = [new Node(END), new Node(cfg.startSymbol)];
+    const root = nodeStack[1];
+    while (symbolStack.length) {
+      const X = symbolStack.pop();
+      const node = nodeStack.pop();
+      const a = tokenSymbol(input[ip]);
+
+      // 종료
+      if (X === END && a === END) break;
+
+      // 터미널 또는 종료 기호 처리
+      if (cfg.terminals.includes(X) || X === END) {
+        if (X === a) {
+          node.lexeme = input[ip].lexeme;
+          if (this.symbolTable && this.symbolTable.has(node.lexeme)) {
+            node.attributes = this.symbolTable.get(node.lexeme);
+          }
+          ip++;
+        } else {
+          throw new Error(`파싱 오류: 예상 ${X}, 입력 ${a} at position ${ip}`);
+        }
+      } else {
+        // 비터미널 처리
+        const row = parsingTable.get(X);
+        const rhs = row.get(a);
+        if (!rhs) {
+          throw new Error(`파싱 테이블 누락 M[${X}, ${a}]`);
+        }
+        // 자식 노드 생성
+        const children = rhs.length ? rhs.map(sym => new Node(sym)) : [];
+        node.children = children;
+        for (let j = children.length - 1; j >= 0; j--) {
+          const sym = rhs[j];
+          if (sym !== EPS) {
+            symbolStack.push(sym);
+            nodeStack.push(children[j]);
+          }
+        }
+      }
+    }
+
+    // 트리를 보기위한 함수
+    function printCST(node, indent = 0) {
+      const lex = node.lexeme != null ? ` (${node.lexeme})` : '';
+      console.log(' '.repeat(indent) + node.symbol + lex);
+      
+      for (const child of node.children) {
+        printCST(child, indent + 2);
+      }
+    }
+
+    printCST(root);
+    console.log("--------------------------------------------")
+    return root;
+  }
+
+  /**
+   * 
+   * @param {parserTree} parserTree // CST이다. 
+   */
+  MakeAST(parserTree) {
+
+    
+
   }
 
   /**
@@ -203,7 +604,19 @@ class Frontend {
    */
   Parser(tokenStream) {
 
-    
+    // former grammer의 규칙을 설정 
+    // chomsky의 type2를 활용한 CFG로 토큰 스트림을 나눌예정
+    const cfg = this.CFGs(tokenStream);
+
+    // CFGs를 활용해서 parsing table을 생성할 예정
+    const parsingTable = this.MakeParsingTable(cfg);
+
+    // LL(1) parser를 진행하여 파서트리(CST)를 생성
+    // parsing table이랑 tokenStream을 활용
+    const parserTree = this.MakeParserTree(tokenStream, parsingTable, cfg);
+
+    // AST 제작
+
 
   }
 

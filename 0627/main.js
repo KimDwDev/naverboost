@@ -9,18 +9,19 @@ class Compile {
    */
   constructor(Main) {
     this.main = Main;
-    this.symbotabl = new Map();
+    this.symbolTable = new Map();
   }
 
   // 프런트엔드
   FrontEnd() {
 
     const frontend = new Frontend(this.main);
+    console.log("컴파일 중......");
 
     // Lexer: 문자 -> 토큰 파싱
     const tokenStream = frontend.Lexer();
 
-    // Parser: 토큰 -> AST 변환
+    // Parser: 토큰 -> 파서트리 -> AST 변환
     frontend.Parser(tokenStream);
 
     // SementicAnalyses: AST의미 분석
