@@ -43,9 +43,14 @@ class FileClass{
 
       // 맵에 지정하고 문자를 입력한다.
       const [ file, exe ] = fileNameList;
+
+      // 가능한 파일 확장자만 남기려고 함 만약 pdf, word 등만 가능하게 할려고 했다면 /^(word|pdf)/
+      const regxp = /^[a-z]{2}/;
+      const parseExe = exe.match(regxp);
+
       const fileMap = new Map();
       fileMap.set("file", file);
-      fileMap.set("exe", exe);
+      fileMap.set("exe", parseExe);
       fileData[i] = fileMap;
     }
 
