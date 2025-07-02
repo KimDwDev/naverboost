@@ -1,11 +1,31 @@
 "use strict";
 
 class StateTransition {
+  #history = [];
 
   constructor() {
     this.state = "IDLE";
+    this.#history =[];
+    this.EventMap = {
+      "IDLE" : (event) => this.IDELGuard(event),
+      "INVITED" : (event) => this.INVITEDGuard(event),
+      "FAILED" : (event) => this.FAILEDGuard(event),
+      "AUTH REQUESTED" : (event) => this.AuthRequestedGuard(event),
+      "REDIRECTING" : (event) => this.RedirectingGuard(event),
+      "CANCELLING" : (event) => this.CANCELLINGGuard(event),
+      "ACCEPTED" : (event) => this.ACCEPTEDGuard(event),
+      "REDIRECTED" : (event) => this.REDIRECTEDGuard(event),
+      "ESTABLISHED" : (event) => this.ESTABLISHEDGuard(event),
+      "CANCELLED" : (event) => this.CANCELLEDGuard(event),
+      "CLOSING" : (event) => this.CLOSINGGuard(event),
+      "TERMINATED" : (event) => this.TERMINATEDGuard(event)
+    }
   }
   
+  /**
+   * 
+   * @param {state} state // 전환할 상태 
+   */
   State(state) {
     this.state = state;
   }
@@ -15,42 +35,10 @@ class StateTransition {
    * @param {event} event // 이벤트 발생 
    */
   Event(event) {
-    
-    // IDLE 
-    this.state === "IDLE" && this.IDELGuard(event);
-    
-    // INVITED
-    this.state === "INVITED" && this.INVITEDGuard(event);
-
-    // FAILED
-    this.state === "FAILED" && this.FAILEDGuard(event);
-
-    // AUTH REQUESTED 
-    this.state === "AUTH REQUESTED" && this.AuthRequestedGuard(event);
-
-    // REDIRECTING
-    this.state === "REDIRECTING" && this.RedirectingGuard(event);
-
-    // CANCELLING 
-    this.state === "CANCELLING" && this.CANCELLINGGuard(event);
-
-    // ACCEPTED
-    this.state === "ACCEPTED" && this.ACCEPTEDGuard(event);
-
-    // REDIRECTED 
-    this.state === "REDIRECTED" && this.REDIRECTEDGuard(event);
-
-    // ESTABLISHED
-    this.state === "ESTABLISHED" && this.ESTABLISHEDGuard(event);
-
-    // CANCELLED
-    this.state === "CANCELLED" && this.CANCELLEDGuard(event);
-
-    // CLOSING
-    this.state === "CLOSING" && this.CLOSINGGuard(event);
-
+    this.EventMap[this.state](event);
   }
 
+  ////////////// GUARD ////////////////////////////////
   // ORIGIN 
   IDELGuard(event) {
     event === "INVITE" && this.Action("INVITED");
@@ -116,17 +104,23 @@ class StateTransition {
     event === "200(BYE)" && this.Action("TERMINATED");
   }
 
+  // 4 
+  TERMINATEDGuard(_) {
+
+  }
+
 
   /**
-   * 
+   * action
    * @param {state} state // 변화시킬 상태조건 
    */
   Action(state) {
-  // 처음에는 ,를 안달기 위한 조치
-  this.state !== "IDLE" && this.state !== state && process.stdout.write(",");
-  
-  // 변화가 있을때만 프린트 하고 변화를 주겠다.
-  this.state !== state && process.stdout.write(`"${state}"`) && this.State(state);
+    // 상태과 변화할때 마다 기록하고 전환 시킨다.
+    this.state !== state && this.#history.push(state) && this.State(state);
+  }
+
+  GetHistory() {
+    return this.#history;
   }
 
 }
@@ -146,14 +140,9 @@ r1.question("", (que) => {
 
   const queJson = JSON.parse(que);
 
-  process.stdout.write("[");
-
   queJson.forEach((event) => {
       stateTransition.Event(event);
   });
-
-  process.stdout.write("]");
-  console.log();
-
+  console.log(JSON.stringify(stateTransition.GetHistory()));
   r1.close();
 })
