@@ -18,13 +18,26 @@ function score(arr) {
     ComputerState = STATE.ERROR 
   };
   
-  // 
+  // 상태가 ON이면  
   if (ComputerState === STATE.ON) {
     const game = new GameClass(Users);
     game.game();
+    return Computer.Answer(Users);
   } 
-  console.log(Users);
-
+  
+  // 상태가 ERROR이면
+  return ["ERROR"];
 }
 
-score(["DGD", "MGG"]);
+const readline = require("readline");
+
+const r1 = readline.createInterface({
+  input : process.stdin,
+  output : process.stdout
+})
+
+r1.question('', (data) => {
+  console.log(score(JSON.parse(data)));
+  ComputerState = STATE.OFF;
+  r1.close();
+})

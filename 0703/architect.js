@@ -10,6 +10,11 @@ class ComputerSystem {
       [USERKey.DICE] : "",
     });
 
+  #Answers = Object.freeze({
+    [BoardPoint.Z] : (score) =>  `${score}, ${BoardPoint.Z}`,
+    "ERR" : (score) => `${score}, ERR`,
+  })
+
   constructor() {
     this.Guard = Object.freeze({
       [STATE.OFF] : (arr) => this.#ComputerGuardFunc(arr),
@@ -42,6 +47,23 @@ class ComputerSystem {
       this.#User[USERKey.DICE] = dice;
       Users.push({ ...this.#User });
     })
+  }
+
+  #CommonAnswerFunc(score, start, end, point) {
+    return `${score} ${start}${end}${point}`;
+  }
+
+  /**
+   * 
+   * @param {Users} Users // 정답 처리할 Users 
+   */
+  Answer(Users) {
+    const Answer = [];
+    Users.forEach((User) => {
+      const ans = User[USERKey.END] === BoardPoint.Z || User[USERKey.END] === "ERR" ? this.#Answers[User[USERKey.END]] && this.#Answers[User[USERKey.END]](User[USERKey.SCORE]) : this.#CommonAnswerFunc(User[USERKey.SCORE], User[USERKey.START], User[USERKey.END], User[USERKey.POINT]); 
+      Answer.push(ans);
+    })
+    return Answer;
   }
 
 }

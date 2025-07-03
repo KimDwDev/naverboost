@@ -10,7 +10,8 @@ class GameClass {
       [USERState.PLAY] : (diceNumber) => this.#GameGuardFunc(diceNumber)
     });
     this.GameAction = Object.freeze({
-      [USERState.PLAY] : (i, dice) => this.#GameStart(i, dice)
+      [USERState.PLAY] : (i, dice) => this.#GameStart(i, dice),
+      [USERState.ERROR] : (i, _) => this.#GameError(i)
     })
   }
 
@@ -89,6 +90,14 @@ class GameClass {
     }
   }
 
+  /**
+   * 
+   * @param {i} i // 번쨰 유저가 오류가 있을때 
+   */
+  #GameError(i) {
+    this.Users[i][USERKey.END] = "ERR";
+  }
+
   game() {
 
     for ( let i = 0; i < this.Users.length; i++ ) {
@@ -108,7 +117,10 @@ class GameClass {
         
         // action -> transition
         this.GameAction[userState] && this.GameAction[userState](i, dice);
+
+        if(userState === USERState.ERROR) break;
       }
+      userState = USERState.STOP;
     }
   }
 
