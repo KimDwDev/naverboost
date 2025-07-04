@@ -1,6 +1,6 @@
 "use strict";
 
-const STATE = Object.freeze({
+export const STATE = Object.freeze({
   ON : "ON",
   OFF : "OFF",
   DATA_LOAD : "DATA LOAD",
@@ -9,26 +9,25 @@ const STATE = Object.freeze({
   ERROR : "ERROR"
 })
 
-const MAP_NAME = Object.freeze({
+export const MAP_NAME = Object.freeze({
   VERTICES : "vertices",
   TRIANGLES : "triangles"
 })
 
-const VERTICE_NAME = Object.freeze({
+export const VERTICE_NAME = Object.freeze({
   X : "x", 
   Y : "y",
   Z : "z"
 })
 
-const TRIANGLE_NAME = Object.freeze({
+export const TRIANGLE_NAME = Object.freeze({
   V1 : "v1",
   V2 : "v2",
   V3 : "v3"
 })
 
-const ANSWER_NAME = Object.freeze({
+export const ANSWER_NAME = Object.freeze({
   NAME : "NAME",
   VALUE: "VALUE"
 })
 
-module.exports = { STATE, VERTICE_NAME, TRIANGLE_NAME, MAP_NAME, ANSWER_NAME };

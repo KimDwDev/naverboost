@@ -1,6 +1,6 @@
 "use strict";
 
-class MathClass {
+export class MathClass {
 
   constructor() {}
 
@@ -24,5 +24,3 @@ class MathClass {
   }
 
 }
-
-module.exports = { MathClass };

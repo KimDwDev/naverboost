@@ -1,10 +1,10 @@
 "use strict"
 
-const fs = require("fs/promises");
-const path = require("path")
+import * as fs from "fs/promises";
+import * as path from "path";
 
 // 파일을 다루는 클래스
-class FileClass {
+export class FileClass {
 
   constructor(filePath) {
     this.filePath = filePath;
@@ -12,7 +12,7 @@ class FileClass {
 
   /**입력한 파일이름을 경로로 변경해줌 */
   ChangeFilePath() {
-    this.filePath = path.join(__dirname, this.filePath);
+    this.filePath = path.join(process.cwd(), this.filePath);
     return true;
   }
 
@@ -33,7 +33,7 @@ class FileClass {
    */
   async OneQueReadFile(fileName) {
 
-    const filePath = path.join(__dirname, fileName);
+    const filePath = path.join(process.cwd(), fileName);
     
     try {
       const fileData = await fs.readFile(filePath, "utf-8");
@@ -45,5 +45,3 @@ class FileClass {
   }
   
 }
-
-module.exports = { FileClass }; 

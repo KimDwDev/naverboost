@@ -1,6 +1,6 @@
 "use strict";
 
-class StringClass {
+export class StringClass {
 
   constructor() {}
 
@@ -46,5 +46,3 @@ class StringClass {
   }
 
 }
-
-module.exports = { StringClass }

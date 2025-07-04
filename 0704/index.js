@@ -1,13 +1,15 @@
 "use strict";
-const { FileClass } = require("./file")
-const { StringClass } = require("./string")
-const { MathClass } = require("./math")
-const { STATE, MAP_NAME, VERTICE_NAME, TRIANGLE_NAME, ANSWER_NAME } = require("./name")
+import { FileClass } from "./file.js";
+import { StringClass } from "./string.js";
+import { MathClass } from "./math.js";
+import { ChalkClass } from "./ansi.js"
+import { STATE, MAP_NAME, VERTICE_NAME, TRIANGLE_NAME, ANSWER_NAME } from "./name.js";
+import readline from "readline";
 
 let GLOBAL_STATE = STATE.OFF;
 
 class Architect {
-
+  #sleep = (ms) => new Promise(res => setTimeout(res, ms))
   #systemState = STATE.OFF;
   #fileData = undefined;
   #modelData = new Map();
@@ -37,6 +39,8 @@ class Architect {
     this.StringClass = new StringClass();
     // 수학 문자 사용 클래스
     this.MathClass = new MathClass();
+    // ansi 이스케이프 문자 다루는 클래스
+    this.AnsiClass = new ChalkClass(40);
   }
 
   /** 입력한 파일 이름의 데이터를 가져오는 로직 */
@@ -156,34 +160,48 @@ class Architect {
 
   async Start() {
 
+    // progress bar
+    this.AnsiClass.ProgressBar(0);
+
     // 파일을 주소로 변경
     await this.#GetFileData();
+    await this.#sleep(1000);
+
+    this.AnsiClass.ProgressBar(10);
 
     // 시스템이 켜졌을때만 반응
     if ( this.#systemState === STATE.ON ) {
       const loadFileBool = await this.#GetEachFileData();
-      if (loadFileBool) this.#systemState = STATE.DATA_LOAD;
+      if (loadFileBool) {
+        this.#systemState = STATE.DATA_LOAD
+        await this.#sleep(1000);
+        this.AnsiClass.ProgressBar(30);
+      };
     }
 
     // 파일이 다 받아졌을때만 반응
     if (this.#systemState === STATE.DATA_LOAD) {
       this.#GetVerticleAndTriangle();
       this.#systemState = STATE.DATA_SET;
+      await this.#sleep(1000);
+      this.AnsiClass.ProgressBar(50);
     };
 
     // 파일이 준비되어졌을때만 반응
     if (this.#systemState === STATE.DATA_SET) {
       this.#Answer();
+      await this.#sleep(1000);
+      this.AnsiClass.ProgressBar(70);
     }
 
     // 끝나면
     if (this.#systemState === STATE.END) {
+      await this.#sleep(1000);
+      this.AnsiClass.ProgressBar(100);
       return this.#answer.map((ans) => ans[ANSWER_NAME.NAME]);
     }
   }
 }
-
-const readline = require("readline");
 
 const r1 = readline.createInterface({
   input : process.stdin,
@@ -193,6 +211,8 @@ const r1 = readline.createInterface({
 r1.question('', async (fileName) => {
   const architect = new Architect(fileName);
   const answer = await architect.Start();
-  console.log(answer);
+  answer && answer.forEach((ans) => {
+    console.log(`1번답: ${ans}`);
+  })
   r1.close();
 })
