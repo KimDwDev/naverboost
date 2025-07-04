@@ -4,18 +4,31 @@ const { StringClass } = require("./string")
 const { MathClass } = require("./math")
 const { STATE, MAP_NAME, VERTICE_NAME, TRIANGLE_NAME, ANSWER_NAME } = require("./name")
 
+let GLOBAL_STATE = STATE.OFF;
+
 class Architect {
 
   #systemState = STATE.OFF;
   #fileData = undefined;
   #modelData = new Map();
   #parseData = new Map();
-  #answer = {
-    [ANSWER_NAME.NUMBER1] : undefined,
-    [ANSWER_NAME.NUMBER2] : undefined,
-    [ANSWER_NAME.NUMBER3] : undefined,
-    [ANSWER_NAME.NUMBER4] : undefined
-  }
+  #answer = [
+  {
+    [ANSWER_NAME.NAME] : undefined,
+    [ANSWER_NAME.VALUE] : -Infinity
+  },
+  {
+    [ANSWER_NAME.NAME] : undefined,
+    [ANSWER_NAME.VALUE] : -Infinity
+  },
+  {
+    [ANSWER_NAME.NAME] : undefined,
+    [ANSWER_NAME.VALUE] : -Infinity
+  },
+  {
+    [ANSWER_NAME.NAME] : undefined,
+    [ANSWER_NAME.VALUE] : -Infinity
+  }]
 
   constructor(fileName) {
     // 파일 다루는 클래스
@@ -111,24 +124,34 @@ class Architect {
       parseData[MAP_NAME.TRIANGLES].forEach((triangleData) => {
 
         // x, y, z 가져오기
-        const xyz = [vertices[+triangleData[TRIANGLE_NAME.V1]], vertices[+triangleData[TRIANGLE_NAME.V2]], vertices[+triangleData[TRIANGLE_NAME.V3]] ];
-
-        // x, y, z로 각각 숫자로 사용하게 변경
-        const [ x, y, z ] = xyz.map((xyzData) => {
+        const [x, y, z] = [vertices[+triangleData[TRIANGLE_NAME.V1]], vertices[+triangleData[TRIANGLE_NAME.V2]], vertices[+triangleData[TRIANGLE_NAME.V3]] ]
+        .map((xyzData) => {
           return [ +xyzData[VERTICE_NAME.X], +xyzData[VERTICE_NAME.Y], +xyzData[VERTICE_NAME.Z]];
-        });
+        });;
 
         // 넓이 구하기
-        const crossNum = this.MathClass.CrossProductFunction(x, y, z)
+        const crossNum = this.MathClass.CrossProductFunction(x, y, z);
         
         // 넓이가 0이라는것은 세 점이 한 직선위에 있기 때문에 넓이라고 칠수가 없다. 따라서 삼각형일 때만 문제의 정답을 골라주는 것이다.
         if ( crossNum > 0 ) {
+          // x축으로 가장 긴값
+          for ( let i = 0; i < 3; i++ ) {
 
-          
+            const maxVal = this.MathClass.GetMaxValueIndex(i, x, y, z);
 
+            if ( maxVal > this.#answer[i][ANSWER_NAME.VALUE] ) {
+              this.#answer[i][ANSWER_NAME.NAME] = parseKey;
+              this.#answer[i][ANSWER_NAME.VALUE] = maxVal;
+            }
+          }
+          if ( crossNum > this.#answer[3][ANSWER_NAME.VALUE]) {
+            this.#answer[3][ANSWER_NAME.NAME] = parseKey;
+            this.#answer[3][ANSWER_NAME.VALUE] = crossNum;
+          }
         }
       }) 
     }
+    this.#systemState = STATE.END;
   }
 
   async Start() {
@@ -152,8 +175,24 @@ class Architect {
     if (this.#systemState === STATE.DATA_SET) {
       this.#Answer();
     }
+
+    // 끝나면
+    if (this.#systemState === STATE.END) {
+      return this.#answer.map((ans) => ans[ANSWER_NAME.NAME]);
+    }
   }
 }
 
-const architect = new Architect("data.model");
-architect.Start();
+const readline = require("readline");
+
+const r1 = readline.createInterface({
+  input : process.stdin,
+  output : process.stdout
+})
+
+r1.question('', async (fileName) => {
+  const architect = new Architect(fileName);
+  const answer = await architect.Start();
+  console.log(answer);
+  r1.close();
+})

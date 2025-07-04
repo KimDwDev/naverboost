@@ -5,6 +5,7 @@ const STATE = Object.freeze({
   OFF : "OFF",
   DATA_LOAD : "DATA LOAD",
   DATA_SET : "DATA SET",
+  END : "END",
   ERROR : "ERROR"
 })
 
@@ -26,10 +27,8 @@ const TRIANGLE_NAME = Object.freeze({
 })
 
 const ANSWER_NAME = Object.freeze({
-  NUMBER1 : "NUMBER1",
-  NUMBER2 : "NUMBER2",
-  NUMBER3 : "NUMBER3",
-  NUMBER4 : "NUMBER4"
+  NAME : "NAME",
+  VALUE: "VALUE"
 })
 
 module.exports = { STATE, VERTICE_NAME, TRIANGLE_NAME, MAP_NAME, ANSWER_NAME };
